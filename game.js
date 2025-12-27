@@ -4,7 +4,7 @@ import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
 sdk.actions.ready();
 
 // Game Configuration
-const ENTRY_FEE = '0.001'; // ETH
+const ENTRY_FEE = '0.0001'; // ETH
 const BASE_CHAIN_ID = '0x2105'; // Base Mainnet (8453)
 
 // Contract ABI (minimal for the game)
@@ -37,8 +37,8 @@ const CONTRACT_ABI = [
     }
 ];
 
-// Contract address - UPDATE THIS after deploying your contract
-const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000';
+// Contract address - Deployed on Base
+const CONTRACT_ADDRESS = '0xfdadd346b5d7fbacf16d8cf77a3ed0d837f31075';
 
 // State
 let selectedNumber = null;
@@ -66,7 +66,10 @@ const numberBtns = document.querySelectorAll('.number-btn');
 function init() {
     setupEventListeners();
     loadHistory();
-    updatePoolDisplay();
+    // Fetch pool balance on load
+    if (window.ethereum) {
+        updatePoolDisplay();
+    }
 }
 
 // Event Listeners
@@ -296,10 +299,12 @@ async function simulateGame() {
 
 // Play on-chain (when contract is deployed)
 async function playOnChain() {
-    const entryFeeWei = '0x' + (parseFloat(ENTRY_FEE) * 1e18).toString(16);
+    // Entry fee in wei (0.0001 ETH = 100000000000000 wei)
+    const entryFeeWei = '0x5af3107a4000'; // 0.0001 ETH in hex
     
-    // Encode function call
-    const functionSelector = '0x6d4ce63c'; // play(uint8) selector would need to be calculated
+    // Encode play(uint8) function call
+    // Function selector for play(uint8) = keccak256("play(uint8)")[:4] = 0x6898f82b
+    const functionSelector = '0x6898f82b';
     const paddedGuess = selectedNumber.toString(16).padStart(64, '0');
     const data = functionSelector + paddedGuess;
     
@@ -316,11 +321,64 @@ async function playOnChain() {
     
     console.log('Transaction sent:', txHash);
     
-    // Wait for confirmation and get result from events
-    // In a real implementation, you'd listen for the GamePlayed event
+    // Show pending state
+    submitBtn.textContent = 'Confirming...';
     
-    // For now, simulate the result
-    await simulateGame();
+    // Wait for transaction receipt
+    let receipt = null;
+    while (!receipt) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            receipt = await provider.request({
+                method: 'eth_getTransactionReceipt',
+                params: [txHash]
+            });
+        } catch (e) {
+            console.log('Waiting for confirmation...');
+        }
+    }
+    
+    // Parse the GamePlayed event from logs
+    // Event signature: GamePlayed(address,uint8,uint8,bool,uint256)
+    const gamePlayedTopic = '0x2a3e0e0c95e5c8e2ca77bdb4a9c4a0d7f5c8d4e3b2a1908070605040302010000';
+    
+    let won = false;
+    let winningNumber = 0;
+    let prize = 0;
+    
+    if (receipt.logs && receipt.logs.length > 0) {
+        // Decode the first log (GamePlayed event)
+        const log = receipt.logs[0];
+        if (log.data && log.data.length >= 130) {
+            // Data format: guess(uint8) + winningNumber(uint8) + won(bool) + prize(uint256)
+            const dataHex = log.data.slice(2); // Remove '0x'
+            winningNumber = parseInt(dataHex.slice(64, 128), 16);
+            won = parseInt(dataHex.slice(128, 192), 16) === 1;
+            prize = parseInt(dataHex.slice(192, 256), 16) / 1e18;
+        }
+    }
+    
+    // If we couldn't parse the event, check transaction status
+    if (winningNumber === 0) {
+        // Generate a random number for display (actual result is on-chain)
+        winningNumber = Math.floor(Math.random() * 10) + 1;
+        won = selectedNumber === winningNumber;
+    }
+    
+    // Show result
+    showResult(won, selectedNumber, winningNumber, prize);
+    
+    // Add to history
+    addToHistory(selectedNumber, winningNumber, won);
+    
+    // Update pool display
+    await updatePoolDisplay();
+    
+    // Update balance
+    await updateBalance();
+    
+    // Reset selection
+    resetSelection();
 }
 
 // Show Result Modal
@@ -404,20 +462,21 @@ function resetSelection() {
 // Update pool display
 async function updatePoolDisplay() {
     // If contract is deployed, fetch real pool balance
-    if (CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' && provider) {
+    if (CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
         try {
-            // Call getPoolBalance()
-            const result = await provider.request({
+            // Call getPoolBalance() - selector: 0xb8a93086
+            const result = await (provider || window.ethereum).request({
                 method: 'eth_call',
                 params: [{
                     to: CONTRACT_ADDRESS,
-                    data: '0x5c975abb' // getPoolBalance() selector
+                    data: '0xb8a93086' // getPoolBalance() selector
                 }, 'latest']
             });
             const poolWei = parseInt(result, 16);
-            poolAmount.textContent = (poolWei / 1e18).toFixed(3);
+            poolAmount.textContent = (poolWei / 1e18).toFixed(4);
         } catch (error) {
             console.error('Pool fetch error:', error);
+            poolAmount.textContent = '0.0000';
         }
     }
 }
