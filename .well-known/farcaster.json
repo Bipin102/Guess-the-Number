@@ -19,7 +19,7 @@
     "tagline": "Pick 1-10 • Win the Pool",
     "heroImageUrl": "https://guess-the-number-black-seven.vercel.app/preview.png",
     "screenshotUrls": ["https://guess-the-number-black-seven.vercel.app/preview.png"],
-    "ogTitle": "Guess the Number - Win ETH on Base",
+    "ogTitle": "Guess the Number - Win ETH",
     "ogDescription": "Play a simple guessing game on Base blockchain. Pick a number, pay to play, win the pool!",
     "ogImageUrl": "https://guess-the-number-black-seven.vercel.app/preview.png"
   }
