@@ -1,4 +1,5 @@
 import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+import { ethers } from 'https://esm.sh/ethers@6.9.0';
 
 // Initialize Farcaster SDK
 sdk.actions.ready();
@@ -299,21 +300,22 @@ async function simulateGame() {
 
 // Play on-chain (when contract is deployed)
 async function playOnChain() {
-    // Entry fee: 0.0001 ETH in wei (100000000000000)
-    const entryFeeWei = BigInt(100000000000000).toString(16);
+    // Create contract interface for proper encoding
+    const contractABI = [
+        "function play(uint8 _guess) external payable"
+    ];
     
-    // Encode play(uint8) function call
-    // Function selector: keccak256("play(uint8)") first 4 bytes = 0x6898f82b
-    // But let's recalculate: play(uint8) => 0x6898f82b
-    // Padding the guess to 32 bytes (64 hex chars)
-    const guess = selectedNumber;
-    const functionData = '0x6898f82b' + guess.toString(16).padStart(64, '0');
+    const iface = new ethers.Interface(contractABI);
+    const functionData = iface.encodeFunctionData("play", [selectedNumber]);
+    
+    // Entry fee: 0.0001 ETH
+    const entryFeeWei = ethers.parseEther("0.0001").toString(16);
     
     console.log('Sending transaction:', {
         to: CONTRACT_ADDRESS,
         value: '0x' + entryFeeWei,
         data: functionData,
-        guess: guess
+        guess: selectedNumber
     });
     
     // Send transaction
@@ -323,8 +325,7 @@ async function playOnChain() {
             from: userAddress,
             to: CONTRACT_ADDRESS,
             value: '0x' + entryFeeWei,
-            data: functionData,
-            gas: '0x493E0' // 300000 gas limit
+            data: functionData
         }]
     });
     
