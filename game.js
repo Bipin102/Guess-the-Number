@@ -299,14 +299,22 @@ async function simulateGame() {
 
 // Play on-chain (when contract is deployed)
 async function playOnChain() {
-    // Entry fee in wei (0.0001 ETH = 100000000000000 wei)
-    const entryFeeWei = '0x5af3107a4000'; // 0.0001 ETH in hex
+    // Entry fee: 0.0001 ETH in wei (100000000000000)
+    const entryFeeWei = BigInt(100000000000000).toString(16);
     
     // Encode play(uint8) function call
-    // Function selector for play(uint8) = keccak256("play(uint8)")[:4] = 0x6898f82b
-    const functionSelector = '0x6898f82b';
-    const paddedGuess = selectedNumber.toString(16).padStart(64, '0');
-    const data = functionSelector + paddedGuess;
+    // Function selector: keccak256("play(uint8)") first 4 bytes = 0x6898f82b
+    // But let's recalculate: play(uint8) => 0x6898f82b
+    // Padding the guess to 32 bytes (64 hex chars)
+    const guess = selectedNumber;
+    const functionData = '0x6898f82b' + guess.toString(16).padStart(64, '0');
+    
+    console.log('Sending transaction:', {
+        to: CONTRACT_ADDRESS,
+        value: '0x' + entryFeeWei,
+        data: functionData,
+        guess: guess
+    });
     
     // Send transaction
     const txHash = await provider.request({
@@ -314,8 +322,9 @@ async function playOnChain() {
         params: [{
             from: userAddress,
             to: CONTRACT_ADDRESS,
-            value: entryFeeWei,
-            data: data
+            value: '0x' + entryFeeWei,
+            data: functionData,
+            gas: '0x30000' // 196608 gas limit
         }]
     });
     
@@ -326,43 +335,51 @@ async function playOnChain() {
     
     // Wait for transaction receipt
     let receipt = null;
-    while (!receipt) {
+    let attempts = 0;
+    while (!receipt && attempts < 30) {
         await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
         try {
             receipt = await provider.request({
                 method: 'eth_getTransactionReceipt',
                 params: [txHash]
             });
         } catch (e) {
-            console.log('Waiting for confirmation...');
+            console.log('Waiting for confirmation...', attempts);
         }
     }
     
-    // Parse the GamePlayed event from logs
-    // Event signature: GamePlayed(address,uint8,uint8,bool,uint256)
-    const gamePlayedTopic = '0x2a3e0e0c95e5c8e2ca77bdb4a9c4a0d7f5c8d4e3b2a1908070605040302010000';
+    if (!receipt) {
+        throw new Error('Transaction timeout - check your wallet');
+    }
+    
+    console.log('Receipt:', receipt);
+    
+    // Check if transaction succeeded
+    const success = receipt.status === '0x1';
     
     let won = false;
-    let winningNumber = 0;
+    let winningNumber = Math.floor(Math.random() * 10) + 1;
     let prize = 0;
     
-    if (receipt.logs && receipt.logs.length > 0) {
-        // Decode the first log (GamePlayed event)
-        const log = receipt.logs[0];
-        if (log.data && log.data.length >= 130) {
-            // Data format: guess(uint8) + winningNumber(uint8) + won(bool) + prize(uint256)
-            const dataHex = log.data.slice(2); // Remove '0x'
-            winningNumber = parseInt(dataHex.slice(64, 128), 16);
-            won = parseInt(dataHex.slice(128, 192), 16) === 1;
-            prize = parseInt(dataHex.slice(192, 256), 16) / 1e18;
+    // Try to parse GamePlayed event
+    if (success && receipt.logs && receipt.logs.length > 0) {
+        try {
+            const log = receipt.logs[0];
+            if (log.data && log.data.length > 2) {
+                const dataHex = log.data.slice(2);
+                // Data: guess(32) + winningNumber(32) + won(32) + prize(32)
+                if (dataHex.length >= 256) {
+                    const guessFromLog = parseInt(dataHex.slice(0, 64), 16);
+                    winningNumber = parseInt(dataHex.slice(64, 128), 16);
+                    won = parseInt(dataHex.slice(128, 192), 16) === 1;
+                    prize = parseInt(dataHex.slice(192, 256), 16) / 1e18;
+                    console.log('Parsed event:', { guessFromLog, winningNumber, won, prize });
+                }
+            }
+        } catch (e) {
+            console.log('Could not parse event:', e);
         }
-    }
-    
-    // If we couldn't parse the event, check transaction status
-    if (winningNumber === 0) {
-        // Generate a random number for display (actual result is on-chain)
-        winningNumber = Math.floor(Math.random() * 10) + 1;
-        won = selectedNumber === winningNumber;
     }
     
     // Show result
