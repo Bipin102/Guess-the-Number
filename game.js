@@ -324,7 +324,7 @@ async function playOnChain() {
             to: CONTRACT_ADDRESS,
             value: '0x' + entryFeeWei,
             data: functionData,
-            gas: '0x30000' // 196608 gas limit
+            gas: '0x493E0' // 300000 gas limit
         }]
     });
     
