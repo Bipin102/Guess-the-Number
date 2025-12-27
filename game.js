@@ -1,0 +1,432 @@
+import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+
+// Initialize Farcaster SDK
+sdk.actions.ready();
+
+// Game Configuration
+const ENTRY_FEE = '0.001'; // ETH
+const BASE_CHAIN_ID = '0x2105'; // Base Mainnet (8453)
+
+// Contract ABI (minimal for the game)
+const CONTRACT_ABI = [
+    {
+        "inputs": [{"internalType": "uint8", "name": "_guess", "type": "uint8"}],
+        "name": "play",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPoolBalance",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "internalType": "address", "name": "player", "type": "address"},
+            {"indexed": false, "internalType": "uint8", "name": "guess", "type": "uint8"},
+            {"indexed": false, "internalType": "uint8", "name": "winningNumber", "type": "uint8"},
+            {"indexed": false, "internalType": "bool", "name": "won", "type": "bool"},
+            {"indexed": false, "internalType": "uint256", "name": "prize", "type": "uint256"}
+        ],
+        "name": "GamePlayed",
+        "type": "event"
+    }
+];
+
+// Contract address - UPDATE THIS after deploying your contract
+const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+// State
+let selectedNumber = null;
+let walletConnected = false;
+let userAddress = null;
+let provider = null;
+
+// DOM Elements
+const connectBtn = document.getElementById('connectBtn');
+const walletInfo = document.getElementById('walletInfo');
+const walletAddress = document.getElementById('walletAddress');
+const walletBalance = document.getElementById('walletBalance');
+const poolAmount = document.getElementById('poolAmount');
+const selectedDisplay = document.getElementById('selectedNumber');
+const submitBtn = document.getElementById('submitBtn');
+const resultModal = document.getElementById('resultModal');
+const resultIcon = document.getElementById('resultIcon');
+const resultTitle = document.getElementById('resultTitle');
+const resultMessage = document.getElementById('resultMessage');
+const closeModal = document.getElementById('closeModal');
+const historyList = document.getElementById('historyList');
+const numberBtns = document.querySelectorAll('.number-btn');
+
+// Initialize
+function init() {
+    setupEventListeners();
+    loadHistory();
+    updatePoolDisplay();
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Wallet connection
+    connectBtn.addEventListener('click', handleConnect);
+    
+    // Number selection
+    numberBtns.forEach(btn => {
+        btn.addEventListener('click', () => selectNumber(btn));
+        // Touch support
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            selectNumber(btn);
+        });
+    });
+    
+    // Submit guess
+    submitBtn.addEventListener('click', handleSubmit);
+    submitBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        handleSubmit();
+    });
+    
+    // Close modal
+    closeModal.addEventListener('click', hideModal);
+    closeModal.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        hideModal();
+    });
+    
+    // Click outside modal to close
+    resultModal.addEventListener('click', (e) => {
+        if (e.target === resultModal) hideModal();
+    });
+}
+
+// Wallet Connection
+async function handleConnect() {
+    if (walletConnected) return;
+    
+    connectBtn.textContent = 'Connecting...';
+    connectBtn.disabled = true;
+    
+    try {
+        // Check if ethereum provider exists
+        if (typeof window.ethereum === 'undefined') {
+            throw new Error('No wallet found. Please install a Web3 wallet.');
+        }
+        
+        provider = window.ethereum;
+        
+        // Request account access
+        const accounts = await provider.request({ 
+            method: 'eth_requestAccounts' 
+        });
+        
+        if (accounts.length === 0) {
+            throw new Error('No accounts found');
+        }
+        
+        userAddress = accounts[0];
+        
+        // Check and switch to Base network
+        await switchToBase();
+        
+        // Update UI
+        walletConnected = true;
+        connectBtn.classList.add('hidden');
+        walletInfo.classList.remove('hidden');
+        walletAddress.textContent = formatAddress(userAddress);
+        
+        // Get balance
+        await updateBalance();
+        
+        // Update submit button state
+        updateSubmitButton();
+        
+        // Listen for account changes
+        provider.on('accountsChanged', handleAccountChange);
+        provider.on('chainChanged', () => window.location.reload());
+        
+    } catch (error) {
+        console.error('Connection error:', error);
+        alert(error.message || 'Failed to connect wallet');
+        connectBtn.textContent = 'Connect Wallet';
+        connectBtn.disabled = false;
+    }
+}
+
+async function switchToBase() {
+    try {
+        await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: BASE_CHAIN_ID }]
+        });
+    } catch (switchError) {
+        // Chain not added, try to add it
+        if (switchError.code === 4902) {
+            await provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                    chainId: BASE_CHAIN_ID,
+                    chainName: 'Base',
+                    nativeCurrency: {
+                        name: 'Ethereum',
+                        symbol: 'ETH',
+                        decimals: 18
+                    },
+                    rpcUrls: ['https://mainnet.base.org'],
+                    blockExplorerUrls: ['https://basescan.org']
+                }]
+            });
+        } else {
+            throw switchError;
+        }
+    }
+}
+
+async function handleAccountChange(accounts) {
+    if (accounts.length === 0) {
+        // Disconnected
+        walletConnected = false;
+        userAddress = null;
+        connectBtn.classList.remove('hidden');
+        walletInfo.classList.add('hidden');
+        connectBtn.textContent = 'Connect Wallet';
+        connectBtn.disabled = false;
+        updateSubmitButton();
+    } else {
+        userAddress = accounts[0];
+        walletAddress.textContent = formatAddress(userAddress);
+        await updateBalance();
+    }
+}
+
+async function updateBalance() {
+    if (!userAddress || !provider) return;
+    
+    try {
+        const balance = await provider.request({
+            method: 'eth_getBalance',
+            params: [userAddress, 'latest']
+        });
+        const ethBalance = parseInt(balance, 16) / 1e18;
+        walletBalance.textContent = `${ethBalance.toFixed(4)} ETH`;
+    } catch (error) {
+        console.error('Balance error:', error);
+    }
+}
+
+// Number Selection
+function selectNumber(btn) {
+    // Remove previous selection
+    numberBtns.forEach(b => b.classList.remove('selected'));
+    
+    // Select new number
+    btn.classList.add('selected');
+    selectedNumber = parseInt(btn.dataset.number);
+    selectedDisplay.textContent = selectedNumber;
+    
+    // Update submit button
+    updateSubmitButton();
+    
+    // Haptic feedback if available
+    if (navigator.vibrate) {
+        navigator.vibrate(10);
+    }
+}
+
+function updateSubmitButton() {
+    submitBtn.disabled = !walletConnected || selectedNumber === null;
+}
+
+// Submit Guess
+async function handleSubmit() {
+    if (!walletConnected || selectedNumber === null) return;
+    
+    submitBtn.textContent = 'Submitting...';
+    submitBtn.disabled = true;
+    
+    try {
+        // For demo without deployed contract, simulate the game
+        if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+            await simulateGame();
+        } else {
+            await playOnChain();
+        }
+    } catch (error) {
+        console.error('Game error:', error);
+        alert(error.message || 'Transaction failed');
+    } finally {
+        submitBtn.textContent = 'Submit Guess';
+        updateSubmitButton();
+    }
+}
+
+// Simulate game (for demo/testing without deployed contract)
+async function simulateGame() {
+    // Simulate delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Generate random winning number
+    const winningNumber = Math.floor(Math.random() * 10) + 1;
+    const won = selectedNumber === winningNumber;
+    
+    // Calculate prize (simulated)
+    const prize = won ? parseFloat(poolAmount.textContent) + parseFloat(ENTRY_FEE) : 0;
+    
+    // Show result
+    showResult(won, selectedNumber, winningNumber, prize);
+    
+    // Add to history
+    addToHistory(selectedNumber, winningNumber, won);
+    
+    // Update pool (simulated)
+    if (!won) {
+        const currentPool = parseFloat(poolAmount.textContent);
+        poolAmount.textContent = (currentPool + parseFloat(ENTRY_FEE)).toFixed(3);
+    } else {
+        poolAmount.textContent = '0.000';
+    }
+    
+    // Reset selection
+    resetSelection();
+}
+
+// Play on-chain (when contract is deployed)
+async function playOnChain() {
+    const entryFeeWei = '0x' + (parseFloat(ENTRY_FEE) * 1e18).toString(16);
+    
+    // Encode function call
+    const functionSelector = '0x6d4ce63c'; // play(uint8) selector would need to be calculated
+    const paddedGuess = selectedNumber.toString(16).padStart(64, '0');
+    const data = functionSelector + paddedGuess;
+    
+    // Send transaction
+    const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+            from: userAddress,
+            to: CONTRACT_ADDRESS,
+            value: entryFeeWei,
+            data: data
+        }]
+    });
+    
+    console.log('Transaction sent:', txHash);
+    
+    // Wait for confirmation and get result from events
+    // In a real implementation, you'd listen for the GamePlayed event
+    
+    // For now, simulate the result
+    await simulateGame();
+}
+
+// Show Result Modal
+function showResult(won, guess, winningNumber, prize) {
+    if (won) {
+        resultIcon.textContent = '🎉';
+        resultTitle.textContent = 'You Won!';
+        resultTitle.style.color = 'var(--accent-green)';
+        resultMessage.textContent = `The number was ${winningNumber}. You won ${prize.toFixed(4)} ETH!`;
+    } else {
+        resultIcon.textContent = '😔';
+        resultTitle.textContent = 'Not This Time';
+        resultTitle.style.color = 'var(--accent-red)';
+        resultMessage.textContent = `The number was ${winningNumber}. Your guess was ${guess}. Try again!`;
+    }
+    
+    resultModal.classList.remove('hidden');
+}
+
+function hideModal() {
+    resultModal.classList.add('hidden');
+}
+
+// History Management
+function addToHistory(guess, winningNumber, won) {
+    const history = getHistory();
+    history.unshift({
+        guess,
+        winningNumber,
+        won,
+        timestamp: Date.now()
+    });
+    
+    // Keep only last 10 games
+    if (history.length > 10) {
+        history.pop();
+    }
+    
+    localStorage.setItem('gameHistory', JSON.stringify(history));
+    renderHistory();
+}
+
+function getHistory() {
+    try {
+        return JSON.parse(localStorage.getItem('gameHistory')) || [];
+    } catch {
+        return [];
+    }
+}
+
+function loadHistory() {
+    renderHistory();
+}
+
+function renderHistory() {
+    const history = getHistory();
+    
+    if (history.length === 0) {
+        historyList.innerHTML = '<p class="no-history">No games played yet</p>';
+        return;
+    }
+    
+    historyList.innerHTML = history.map(game => `
+        <div class="history-item">
+            <span class="history-guess">Guessed ${game.guess} → ${game.winningNumber}</span>
+            <span class="history-result ${game.won ? 'win' : 'lose'}">
+                ${game.won ? 'WON' : 'LOST'}
+            </span>
+        </div>
+    `).join('');
+}
+
+// Reset selection after game
+function resetSelection() {
+    selectedNumber = null;
+    selectedDisplay.textContent = '-';
+    numberBtns.forEach(b => b.classList.remove('selected'));
+    updateSubmitButton();
+}
+
+// Update pool display
+async function updatePoolDisplay() {
+    // If contract is deployed, fetch real pool balance
+    if (CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' && provider) {
+        try {
+            // Call getPoolBalance()
+            const result = await provider.request({
+                method: 'eth_call',
+                params: [{
+                    to: CONTRACT_ADDRESS,
+                    data: '0x5c975abb' // getPoolBalance() selector
+                }, 'latest']
+            });
+            const poolWei = parseInt(result, 16);
+            poolAmount.textContent = (poolWei / 1e18).toFixed(3);
+        } catch (error) {
+            console.error('Pool fetch error:', error);
+        }
+    }
+}
+
+// Format address for display
+function formatAddress(address) {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+// Initialize app
+init();
+

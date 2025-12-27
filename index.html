@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="fc:frame" content="vNext">
+    <meta name="base:app_id" content="[TO BE ADDED LATER]">
+    <title>Guess the Number</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎲 Guess the Number</h1>
+            <p class="subtitle">Pick 1-10 • Win the Pool</p>
+        </header>
+
+        <div class="wallet-section">
+            <button id="connectBtn" class="connect-btn">Connect Wallet</button>
+            <div id="walletInfo" class="wallet-info hidden">
+                <span id="walletAddress"></span>
+                <span id="walletBalance"></span>
+            </div>
+        </div>
+
+        <div class="pool-display">
+            <div class="pool-label">Prize Pool</div>
+            <div class="pool-amount"><span id="poolAmount">0.00</span> ETH</div>
+        </div>
+
+        <div class="game-section">
+            <div class="number-grid">
+                <button class="number-btn" data-number="1">1</button>
+                <button class="number-btn" data-number="2">2</button>
+                <button class="number-btn" data-number="3">3</button>
+                <button class="number-btn" data-number="4">4</button>
+                <button class="number-btn" data-number="5">5</button>
+                <button class="number-btn" data-number="6">6</button>
+                <button class="number-btn" data-number="7">7</button>
+                <button class="number-btn" data-number="8">8</button>
+                <button class="number-btn" data-number="9">9</button>
+                <button class="number-btn" data-number="10">10</button>
+            </div>
+
+            <div class="selected-display">
+                Your guess: <span id="selectedNumber">-</span>
+            </div>
+
+            <div class="fee-info">
+                Entry fee: <span class="fee-amount">0.001 ETH</span>
+            </div>
+
+            <button id="submitBtn" class="submit-btn" disabled>Submit Guess</button>
+        </div>
+
+        <div id="resultModal" class="modal hidden">
+            <div class="modal-content">
+                <div id="resultIcon" class="result-icon"></div>
+                <h2 id="resultTitle"></h2>
+                <p id="resultMessage"></p>
+                <button id="closeModal" class="close-btn">Play Again</button>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h3>Recent Games</h3>
+            <div id="historyList" class="history-list">
+                <p class="no-history">No games played yet</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="game.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Icons - Guess the Number</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 24px;
+        }
+        
+        .canvas-section {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+        
+        .canvas-wrapper {
+            background: #1a1a24;
+            border-radius: 16px;
+            padding: 24px;
+        }
+        
+        .canvas-wrapper h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #8b8b9e;
+        }
+        
+        canvas {
+            display: block;
+            margin: 0 auto 16px;
+            border-radius: 8px;
+        }
+        
+        .download-btn {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 14px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #0052ff, #0066ff);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 82, 255, 0.4);
+        }
+        
+        .instructions {
+            margin-top: 40px;
+            padding: 24px;
+            background: #1a1a24;
+            border-radius: 16px;
+            border: 1px solid #2a2a3a;
+        }
+        
+        .instructions h3 {
+            color: #00d4ff;
+            margin-bottom: 12px;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+            color: #8b8b9e;
+            line-height: 1.8;
+        }
+        
+        .instructions code {
+            background: #0a0a0f;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Guess the Number - Asset Generator</h1>
+        
+        <div class="canvas-section">
+            <div class="canvas-wrapper">
+                <h2>Icon (200x200)</h2>
+                <canvas id="iconCanvas" width="200" height="200"></canvas>
+                <button class="download-btn" id="downloadIcon">Download icon.png</button>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <h2>Preview (600x400)</h2>
+                <canvas id="previewCanvas" width="600" height="400"></canvas>
+                <button class="download-btn" id="downloadPreview">Download preview.png</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>Instructions</h3>
+            <ol>
+                <li>Click <strong>Download icon.png</strong> and save it to your project folder</li>
+                <li>Click <strong>Download preview.png</strong> and save it to your project folder</li>
+                <li>Make sure both files are in the root of your project (same level as <code>index.html</code>)</li>
+                <li>Deploy to Vercel and use your URL in <code>farcaster.json</code></li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Draw Icon (200x200)
+        function drawIcon() {
+            const canvas = document.getElementById('iconCanvas');
+            const ctx = canvas.getContext('2d');
+            const size = 200;
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#0a0a0f');
+            gradient.addColorStop(1, '#1a1a24');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add subtle pattern
+            ctx.fillStyle = 'rgba(0, 82, 255, 0.1)';
+            ctx.beginPath();
+            ctx.arc(size * 0.8, size * 0.2, 60, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'rgba(0, 212, 255, 0.08)';
+            ctx.beginPath();
+            ctx.arc(size * 0.2, size * 0.8, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main circle
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = 65;
+            
+            // Circle glow
+            const glowGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 20);
+            glowGradient.addColorStop(0, 'rgba(0, 82, 255, 0.5)');
+            glowGradient.addColorStop(1, 'rgba(0, 82, 255, 0)');
+            ctx.fillStyle = glowGradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Circle border
+            ctx.strokeStyle = '#0052ff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Circle fill
+            const circleGradient = ctx.createLinearGradient(centerX - radius, centerY - radius, centerX + radius, centerY + radius);
+            circleGradient.addColorStop(0, 'rgba(0, 82, 255, 0.3)');
+            circleGradient.addColorStop(1, 'rgba(0, 82, 255, 0.1)');
+            ctx.fillStyle = circleGradient;
+            ctx.fill();
+            
+            // Question mark
+            ctx.font = 'bold 72px Arial, sans-serif';
+            ctx.fillStyle = '#00d4ff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 212, 255, 0.6)';
+            ctx.shadowBlur = 15;
+            ctx.fillText('?', centerX, centerY + 4);
+            ctx.shadowBlur = 0;
+            
+            // Small decorative numbers
+            ctx.font = 'bold 16px Arial, sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillText('1', 30, 35);
+            ctx.fillText('5', 170, 45);
+            ctx.fillText('10', 40, 170);
+            ctx.fillText('7', 165, 165);
+        }
+        
+        // Draw Preview (600x400)
+        function drawPreview() {
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = 600;
+            const height = 400;
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#0a0a0f');
+            gradient.addColorStop(1, '#12121a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Add background effects
+            ctx.fillStyle = 'rgba(0, 82, 255, 0.12)';
+            ctx.beginPath();
+            ctx.arc(width * 0.15, height * 0.3, 120, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'rgba(0, 212, 255, 0.08)';
+            ctx.beginPath();
+            ctx.arc(width * 0.85, height * 0.7, 100, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'rgba(0, 255, 136, 0.05)';
+            ctx.beginPath();
+            ctx.arc(width * 0.5, height * 0.9, 80, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Title
+            ctx.font = 'bold 42px Arial, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🎲 Guess the Number', width / 2, 70);
+            
+            // Subtitle
+            ctx.font = '18px Arial, sans-serif';
+            ctx.fillStyle = '#8b8b9e';
+            ctx.fillText('Pick 1-10 • Win the Pool', width / 2, 115);
+            
+            // Draw number buttons
+            const buttonSize = 50;
+            const startX = (width - (5 * buttonSize + 4 * 12)) / 2;
+            const startY = 170;
+            
+            for (let i = 0; i < 10; i++) {
+                const row = Math.floor(i / 5);
+                const col = i % 5;
+                const x = startX + col * (buttonSize + 12);
+                const y = startY + row * (buttonSize + 12);
+                
+                // Button background
+                ctx.fillStyle = i === 6 ? '#0052ff' : '#1a1a24';
+                ctx.strokeStyle = i === 6 ? '#0052ff' : '#2a2a3a';
+                ctx.lineWidth = 2;
+                
+                // Rounded rectangle
+                const radius = 10;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + buttonSize - radius, y);
+                ctx.quadraticCurveTo(x + buttonSize, y, x + buttonSize, y + radius);
+                ctx.lineTo(x + buttonSize, y + buttonSize - radius);
+                ctx.quadraticCurveTo(x + buttonSize, y + buttonSize, x + buttonSize - radius, y + buttonSize);
+                ctx.lineTo(x + radius, y + buttonSize);
+                ctx.quadraticCurveTo(x, y + buttonSize, x, y + buttonSize - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Number
+                ctx.font = 'bold 20px Arial, sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText((i + 1).toString(), x + buttonSize / 2, y + buttonSize / 2);
+            }
+            
+            // Prize pool box
+            const poolBoxX = width / 2 - 100;
+            const poolBoxY = 300;
+            const poolBoxW = 200;
+            const poolBoxH = 60;
+            
+            ctx.fillStyle = 'rgba(0, 212, 255, 0.1)';
+            ctx.strokeStyle = '#2a2a3a';
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.roundRect(poolBoxX, poolBoxY, poolBoxW, poolBoxH, 12);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Top accent line
+            ctx.strokeStyle = '#00d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(poolBoxX + 12, poolBoxY);
+            ctx.lineTo(poolBoxX + poolBoxW - 12, poolBoxY);
+            ctx.stroke();
+            
+            // Pool text
+            ctx.font = '11px Arial, sans-serif';
+            ctx.fillStyle = '#8b8b9e';
+            ctx.textAlign = 'center';
+            ctx.fillText('PRIZE POOL', width / 2, poolBoxY + 22);
+            
+            ctx.font = 'bold 22px Arial, sans-serif';
+            ctx.fillStyle = '#00d4ff';
+            ctx.fillText('0.025 ETH', width / 2, poolBoxY + 45);
+            
+            // Base badge
+            ctx.font = '12px Arial, sans-serif';
+            ctx.fillStyle = '#5a5a6e';
+            ctx.fillText('Built on Base', width / 2, height - 25);
+        }
+        
+        // Download functions
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Event listeners
+        document.getElementById('downloadIcon').addEventListener('click', () => {
+            downloadCanvas('iconCanvas', 'icon.png');
+        });
+        
+        document.getElementById('downloadPreview').addEventListener('click', () => {
+            downloadCanvas('previewCanvas', 'preview.png');
+        });
+        
+        // Draw on load
+        drawIcon();
+        drawPreview();
+    </script>
+</body>
+</html>
+
