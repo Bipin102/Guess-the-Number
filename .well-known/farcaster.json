@@ -1,27 +1,26 @@
 {
   "accountAssociation": {
-    "header": "[TO BE PURCHASED FROM FARCASTER]",
-    "payload": "[TO BE PURCHASED FROM FARCASTER]",
-    "signature": "[TO BE PURCHASED FROM FARCASTER]"
+    "header": "eyJmaWQiOjIzMzIxMSwidHlwZSI6ImF1dGgiLCJrZXkiOiIweDMwQTk2M2FFMWJEREU2N0E1MzA5NTgyNjZGN0Y1NzhkQzk3NDFmNkMifQ",
+    "payload": "eyJkb21haW4iOiJndWVzcy10aGUtbnVtYmVyLWJsYWNrLXNldmVuLnZlcmNlbC5hcHAifQ",
+    "signature": "/eOpX9rs2U5gYDE8qOUx/gOBsvrAeMZy6UUWQyDz2LNqUdg7fuqiJd9+gbBUXl5AmAGT6Z/X/TCvKnLBkU1okxw="
   },
   "frame": {
     "version": "1",
     "name": "Guess the Number",
     "subtitle": "Win ETH by guessing right!",
     "description": "A simple blockchain game on Base. Pick a number 1-10, pay a small entry fee, and if your guess matches the random number, you win the entire prize pool!",
-    "iconUrl": "https://[DOMAIN]/icon.png",
-    "homeUrl": "https://[DOMAIN]",
-    "imageUrl": "https://[DOMAIN]/preview.png",
-    "splashImageUrl": "https://[DOMAIN]/icon.png",
+    "iconUrl": "https://guess-the-number-black-seven.vercel.app/icon.png",
+    "homeUrl": "https://guess-the-number-black-seven.vercel.app",
+    "imageUrl": "https://guess-the-number-black-seven.vercel.app/preview.png",
+    "splashImageUrl": "https://guess-the-number-black-seven.vercel.app/icon.png",
     "splashBackgroundColor": "#0a0a0f",
     "primaryCategory": "games",
     "tags": ["game", "arcade", "farcaster", "base", "ethereum"],
     "tagline": "Pick 1-10 • Win the Pool",
-    "heroImageUrl": "https://[DOMAIN]/preview.png",
-    "screenshotUrls": ["https://[DOMAIN]/preview.png"],
+    "heroImageUrl": "https://guess-the-number-black-seven.vercel.app/preview.png",
+    "screenshotUrls": ["https://guess-the-number-black-seven.vercel.app/preview.png"],
     "ogTitle": "Guess the Number - Win ETH on Base",
     "ogDescription": "Play a simple guessing game on Base blockchain. Pick a number, pay to play, win the pool!",
-    "ogImageUrl": "https://[DOMAIN]/preview.png"
+    "ogImageUrl": "https://guess-the-number-black-seven.vercel.app/preview.png"
   }
 }
-
