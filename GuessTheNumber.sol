@@ -40,8 +40,9 @@ contract GuessTheNumber {
         uint256 prize = 0;
         
         if (won) {
-            prize = poolBalance;
-            poolBalance = 0;
+            // Winner gets 50% of the pool, 50% stays for next winner
+            prize = poolBalance / 2;
+            poolBalance = poolBalance - prize;
             
             // Transfer prize to winner
             (bool success, ) = payable(msg.sender).call{value: prize}("");

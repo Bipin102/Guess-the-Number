@@ -38,8 +38,8 @@ const CONTRACT_ABI = [
     }
 ];
 
-// Contract address - Deployed on Base
-const CONTRACT_ADDRESS = '0xfdadd346b5d7fbacf16d8cf77a3ed0d837f31075';
+// Contract address - Deployed on Base (v2: winner gets 50%)
+const CONTRACT_ADDRESS = '0x8b28c26f733c6c0c978d76aa4f8ab5aa13f6f8b2';
 
 // State
 let selectedNumber = null;
