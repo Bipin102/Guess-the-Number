@@ -64,12 +64,20 @@ const historyList = document.getElementById('historyList');
 const numberBtns = document.querySelectorAll('.number-btn');
 
 // Initialize
-function init() {
+async function init() {
     setupEventListeners();
     loadHistory();
     // Fetch pool balance on load
-    if (window.ethereum) {
-        updatePoolDisplay();
+    updatePoolDisplay();
+    
+    // Auto-connect if in Farcaster
+    try {
+        const context = await sdk.context;
+        if (context && context.user) {
+            console.log('In Farcaster context:', context.user);
+        }
+    } catch (e) {
+        console.log('Not in Farcaster context');
     }
 }
 
@@ -116,17 +124,39 @@ async function handleConnect() {
     connectBtn.disabled = true;
     
     try {
-        // Check if ethereum provider exists
-        if (typeof window.ethereum === 'undefined') {
-            throw new Error('No wallet found. Please install a Web3 wallet.');
+        // Try Farcaster SDK first (for mobile in Farcaster app)
+        let accounts = [];
+        
+        try {
+            // Check if we're in Farcaster context
+            const context = await sdk.context;
+            if (context && context.user) {
+                // Use Farcaster's wallet provider
+                const ethProvider = await sdk.wallet.ethProvider;
+                if (ethProvider) {
+                    provider = ethProvider;
+                    accounts = await provider.request({ method: 'eth_requestAccounts' });
+                }
+            }
+        } catch (fcError) {
+            console.log('Not in Farcaster context, trying browser wallet');
         }
         
-        provider = window.ethereum;
-        
-        // Request account access
-        const accounts = await provider.request({ 
-            method: 'eth_requestAccounts' 
-        });
+        // Fall back to browser wallet (MetaMask, etc.)
+        if (accounts.length === 0) {
+            if (typeof window.ethereum === 'undefined') {
+                // Open wallet connect or show instructions
+                const useWalletConnect = confirm('No wallet found. Open in wallet browser?\n\nClick OK to copy the link, then paste in your wallet browser.');
+                if (useWalletConnect) {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Link copied! Paste it in your wallet browser (MetaMask, Coinbase Wallet, etc.)');
+                }
+                throw new Error('Please open this app in a wallet browser');
+            }
+            
+            provider = window.ethereum;
+            accounts = await provider.request({ method: 'eth_requestAccounts' });
+        }
         
         if (accounts.length === 0) {
             throw new Error('No accounts found');
@@ -149,9 +179,11 @@ async function handleConnect() {
         // Update submit button state
         updateSubmitButton();
         
-        // Listen for account changes
-        provider.on('accountsChanged', handleAccountChange);
-        provider.on('chainChanged', () => window.location.reload());
+        // Listen for account changes (only for browser wallets)
+        if (provider.on) {
+            provider.on('accountsChanged', handleAccountChange);
+            provider.on('chainChanged', () => window.location.reload());
+        }
         
     } catch (error) {
         console.error('Connection error:', error);
